@@ -1,0 +1,58 @@
+# =============================================================================
+# File        : manifests/01-quota-and-limits.yaml
+# Practical   : DSO202 Practical 1
+# Apply with  : kubectl apply -f manifests/01-quota-and-limits.yaml
+# Contains    : two objects, separated by the YAML document separator '---'
+# =============================================================================
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dso202-quota
+  namespace: dso202-practical
+  labels:
+    dso202/practical: "01"
+    dso202/managed-by: declarative
+spec:
+  # 'hard' values are absolute. The API server rejects any request that would
+  # take the namespace past one of them.
+  #
+  # Setting a compute cap has a second effect that is easy to miss: once
+  # 'requests.cpu' is capped, EVERY container in the namespace must declare
+  # requests.cpu, or its Pod is rejected. That is why the LimitRange below is
+  # applied at the same time.
+  hard:
+    requests.cpu: "2"
+    requests.memory: 2Gi
+    limits.cpu: "4"
+    limits.memory: 4Gi
+    pods: "20"
+    count/services: "5"
+    count/configmaps: "10"
+    count/secrets: "10"
+
+---
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: dso202-limits
+  namespace: dso202-practical
+  labels:
+    dso202/practical: "01"
+    dso202/managed-by: declarative
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: 200m
+        memory: 128Mi
+      defaultRequest:
+        cpu: 50m
+        memory: 64Mi
+      min:
+        cpu: 10m
+        memory: 16Mi
+      max:
+        cpu: "1"
+        memory: 512Mi
