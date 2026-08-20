@@ -1,0 +1,46 @@
+# =============================================================================
+# File        : manifests/06-pod-client.yaml
+# Apply with  : kubectl apply -f manifests/06-pod-client.yaml
+# Use with    : kubectl exec client-pod -- nslookup web-clusterip
+#               kubectl exec client-pod -- wget -qO- http://web-clusterip
+#               kubectl exec -it client-pod -- sh
+#
+# WHY 'sleep infinity': a container whose main process exits is treated as
+# having crashed, and with restartPolicy Always it enters CrashLoopBackOff.
+# A diagnostic Pod must therefore keep a process alive deliberately.
+# =============================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: client-pod
+  namespace: dso202-practical
+  labels:
+    app: client
+    tier: tooling
+    dso202/practical: "01"
+    dso202/managed-by: declarative
+spec:
+  # No Service selects on 'app: client', so this Pod receives no traffic. It
+  # only sends requests.
+  restartPolicy: Always
+
+  # Shorter than the default 30 seconds, because there is nothing to shut down
+  # gracefully and a fast delete is convenient during cleanup.
+  terminationGracePeriodSeconds: 5
+
+  containers:
+    - name: client
+      image: busybox:1.37
+      imagePullPolicy: IfNotPresent
+
+      # busybox provides sh, wget, nslookup, ping, and the standard file
+      # utilities in a single small binary, which is everything needed here.
+      command: ["/bin/sh", "-c", "sleep infinity"]
+
+      resources:
+        requests:
+          cpu: 25m
+          memory: 32Mi
+        limits:
+          cpu: 100m
+          memory: 64Mi

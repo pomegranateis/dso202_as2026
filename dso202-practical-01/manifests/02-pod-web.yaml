@@ -1,0 +1,77 @@
+# =============================================================================
+# File        : manifests/02-pod-web.yaml
+# Practical   : DSO202 Practical 1
+# Inspect with: kubectl get pod web-pod -o wide --show-labels
+# Delete with : kubectl delete -f manifests/02-pod-web.yaml
+#
+# NOTE: A bare Pod has no controller behind it. If its node fails, nothing
+#       recreates it. Listing 8 replaces this with a Deployment, which is what
+#       real workloads use. This Pod exists to make the Pod specification
+#       itself visible without a controller in the way.
+# =============================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-pod
+  namespace: dso202-practical
+
+  # Labels are the only mechanism by which other objects find this Pod.
+  # A Service, a ReplicaSet, and a NetworkPolicy all locate Pods by label.
+  labels:
+    app: web                       # selected on by the Services in Listings 6 and 7
+    tier: frontend                 # architectural layer
+    dso202/practical: "01"         # which practical created this object
+    dso202/managed-by: declarative # created from a committed file, not a command
+
+  annotations:
+    dso202.cst.edu.bt/description: "Single-container Pod for DSO202 Practical 1 Stage 4"
+
+spec:
+  # 'Always' is the default and is stated explicitly so that the field is
+  # visible. It means the kubelet restarts a container whenever it exits,
+  # regardless of the exit code. 'OnFailure' and 'Never' suit batch work.
+  restartPolicy: Always
+
+  # How long the kubelet waits, after sending the termination signal, before
+  # killing a container. 30 is the default; it is stated so that the shutdown
+  # path is not invisible.
+  terminationGracePeriodSeconds: 30
+
+  containers:
+    # The container name must be unique within the Pod. It is the value passed
+    # to 'kubectl logs -c' and 'kubectl exec -c'.
+    - name: web
+
+      # The tag is pinned to a specific nginx branch. 'nginx:latest' would
+      # make this Pod non-reproducible: the same manifest could produce a
+      # different application tomorrow.
+      image: nginx:1.30-alpine
+
+      # IfNotPresent uses a locally cached image when one exists. Correct for
+      # a pinned tag. 'Always' would be required for a mutable tag, and is
+      # what Kubernetes defaults to when the tag is 'latest'.
+      imagePullPolicy: IfNotPresent
+
+      ports:
+        # Declaring a port does not open or publish anything. It is metadata:
+        # it documents the port for readers, and it gives the port a NAME that
+        # a Service's targetPort can refer to instead of a number.
+        - name: http
+          containerPort: 80
+          protocol: TCP
+
+      resources:
+        # requests = what is guaranteed. The scheduler subtracts the request
+        # from a node's allocatable capacity when deciding whether the Pod
+        # fits. An under-stated request risks eviction; an over-stated one
+        # wastes capacity.
+        requests:
+          cpu: 50m
+          memory: 64Mi
+
+        # limits = the ceiling. Exceeding the memory limit terminates the
+        # container with reason OOMKilled. Exceeding the CPU limit only
+        # throttles it, because CPU is compressible and memory is not.
+        limits:
+          cpu: 200m
+          memory: 128Mi

@@ -1,0 +1,85 @@
+# =============================================================================
+# File        : manifests/03-deployment-web.yaml
+# Apply with  : kubectl apply -f manifests/03-deployment-web.yaml
+# Watch with  : kubectl rollout status deployment/web-deployment
+# Update with : kubectl set image deployment/web-deployment web=nginx:1.31-alpine
+# Undo with   : kubectl rollout undo deployment/web-deployment
+# Verify with : kubectl diff -f manifests/03-deployment-web.yaml
+#
+# OWNERSHIP CHAIN: Deployment -> ReplicaSet -> Pods
+#   The Deployment holds the update strategy and the revision history.
+#   The ReplicaSet it creates holds the replica count and does the counting.
+#   Only Pods actually run containers.
+# =============================================================================
+apiVersion: apps/v1     # NOT 'v1'. Deployments live in the 'apps' API group.
+kind: Deployment
+metadata:
+  name: web-deployment
+  namespace: dso202-practical
+
+  # Labels on the DEPLOYMENT object. These are for finding the Deployment
+  # itself and are separate from the labels in spec.template.metadata.labels,
+  # which land on the Pods.
+  labels:
+    app: web
+    tier: frontend
+    dso202/practical: "01"
+    dso202/managed-by: declarative
+
+spec:
+  # Desired number of Pods.
+  replicas: 3
+
+  # How the Deployment finds the Pods it owns.
+  # IMMUTABLE: this field cannot be changed after creation.
+  # It must MATCH spec.template.metadata.labels below, or the API server
+  # rejects the object with 'selector does not match template labels'.
+  selector:
+    matchLabels:
+      app: web
+      tier: frontend
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # How many replicas may be MISSING during an update.
+      # 0 means the ready count never drops below 3.
+      maxUnavailable: 0
+
+      # How many replicas may exist ABOVE the desired count during an update.
+      maxSurge: 1
+
+  # How long a new Pod must remain ready before it counts as available.
+  minReadySeconds: 5
+
+  # How many old ReplicaSets to keep, scaled to zero, for rollback.
+  revisionHistoryLimit: 5
+
+  # How long a rollout may make no progress before it is marked failed.
+  progressDeadlineSeconds: 300
+
+  template:
+    metadata:
+      labels:
+        app: web
+        tier: frontend
+        dso202/practical: "01"
+        dso202/managed-by: declarative
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.30-alpine
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
