@@ -1,0 +1,55 @@
+LAST SEEN   TYPE      REASON              OBJECT                                 MESSAGE
+7h58m       Normal    Scheduled           pod/web-deployment-84b8695bc4-4tfq5    Successfully assigned dso202-practical/web-deployment-84b8695bc4-4tfq5 to worker-node-1
+7h58m       Normal    Scheduled           pod/web-deployment-84b8695bc4-n4j4c    Successfully assigned dso202-practical/web-deployment-84b8695bc4-n4j4c to worker-node-1
+7h58m       Normal    Scheduled           pod/web-deployment-84b8695bc4-jwbdz    Successfully assigned dso202-practical/web-deployment-84b8695bc4-jwbdz to worker-node-2
+7h58m       Normal    ScalingReplicaSet   deployment/web-deployment              Scaled up replica set web-deployment-84b8695bc4 from 0 to 1
+7h58m       Normal    SuccessfulCreate    replicaset/web-deployment-84b8695bc4   Created pod: web-deployment-84b8695bc4-jwbdz
+7h58m       Normal    Started             pod/web-deployment-84b8695bc4-jwbdz    Container started
+7h58m       Normal    Created             pod/web-deployment-84b8695bc4-jwbdz    Container created
+7h58m       Normal    Pulled              pod/web-deployment-84b8695bc4-jwbdz    Container image "nginx:1.30-alpine" already present on machine and can be accessed by the pod
+7h58m       Normal    SuccessfulCreate    replicaset/web-deployment-84b8695bc4   Created pod: web-deployment-84b8695bc4-4tfq5
+7h58m       Normal    ScalingReplicaSet   deployment/web-deployment              Scaled up replica set web-deployment-84b8695bc4 from 1 to 2
+7h58m       Normal    ScalingReplicaSet   deployment/web-deployment              Scaled down replica set web-deployment-76ddf5fcf9 from 3 to 2
+7h58m       Normal    Killing             pod/web-deployment-76ddf5fcf9-4nrf5    Stopping container web
+7h58m       Normal    SuccessfulDelete    replicaset/web-deployment-76ddf5fcf9   Deleted pod: web-deployment-76ddf5fcf9-4nrf5
+7h58m       Normal    Pulled              pod/web-deployment-84b8695bc4-4tfq5    Container image "nginx:1.30-alpine" already present on machine and can be accessed by the pod
+7h58m       Normal    Created             pod/web-deployment-84b8695bc4-4tfq5    Container created
+7h58m       Normal    Started             pod/web-deployment-84b8695bc4-4tfq5    Container started
+7h58m       Normal    ScalingReplicaSet   deployment/web-deployment              Scaled up replica set web-deployment-84b8695bc4 from 2 to 3
+7h58m       Normal    Pulled              pod/web-deployment-84b8695bc4-n4j4c    Container image "nginx:1.30-alpine" already present on machine and can be accessed by the pod
+7h58m       Normal    Killing             pod/web-deployment-76ddf5fcf9-c8jwd    Stopping container web
+7h58m       Normal    ScalingReplicaSet   deployment/web-deployment              Scaled down replica set web-deployment-76ddf5fcf9 from 2 to 1
+7h58m       Normal    SuccessfulDelete    replicaset/web-deployment-76ddf5fcf9   Deleted pod: web-deployment-76ddf5fcf9-c8jwd
+7h58m       Normal    SuccessfulCreate    replicaset/web-deployment-84b8695bc4   Created pod: web-deployment-84b8695bc4-n4j4c
+7h58m       Normal    Started             pod/web-deployment-84b8695bc4-n4j4c    Container started
+7h58m       Normal    Created             pod/web-deployment-84b8695bc4-n4j4c    Container created
+7h58m       Normal    ScalingReplicaSet   deployment/web-deployment              Scaled down replica set web-deployment-76ddf5fcf9 from 1 to 0
+7h58m       Normal    Killing             pod/web-deployment-76ddf5fcf9-s9hqr    Stopping container web
+7h58m       Normal    SuccessfulDelete    replicaset/web-deployment-76ddf5fcf9   Deleted pod: web-deployment-76ddf5fcf9-s9hqr
+7h55m       Warning   Unhealthy           pod/web-deployment-84b8695bc4-4tfq5    Readiness probe failed: HTTP probe failed with statuscode: 404
+8m31s       Normal    Started             pod/web-deployment-84b8695bc4-4tfq5    Container started
+8m31s       Normal    SandboxChanged      pod/web-deployment-84b8695bc4-jwbdz    Pod sandbox changed, it will be killed and re-created.
+8m31s       Warning   Failed              pod/web-pod                            Error: services have not yet been read at least once, cannot construct envvars
+8m31s       Normal    SandboxChanged      pod/web-pod                            Pod sandbox changed, it will be killed and re-created.
+8m31s       Normal    SandboxChanged      pod/web-deployment-84b8695bc4-4tfq5    Pod sandbox changed, it will be killed and re-created.
+8m31s       Warning   Failed              pod/web-deployment-84b8695bc4-jwbdz    Error: services have not yet been read at least once, cannot construct envvars
+8m31s       Normal    Pulled              pod/web-deployment-84b8695bc4-4tfq5    Container image "nginx:1.30-alpine" already present on machine and can be accessed by the pod
+8m31s       Normal    SandboxChanged      pod/web-deployment-84b8695bc4-n4j4c    Pod sandbox changed, it will be killed and re-created.
+8m31s       Normal    Pulled              pod/web-deployment-84b8695bc4-n4j4c    Container image "nginx:1.30-alpine" already present on machine and can be accessed by the pod
+8m31s       Normal    Created             pod/web-deployment-84b8695bc4-n4j4c    Container created
+8m31s       Normal    Started             pod/web-deployment-84b8695bc4-n4j4c    Container started
+8m31s       Warning   Failed              pod/client-pod                         Error: services have not yet been read at least once, cannot construct envvars
+8m31s       Normal    SandboxChanged      pod/client-pod                         Pod sandbox changed, it will be killed and re-created.
+8m31s       Normal    Created             pod/web-deployment-84b8695bc4-4tfq5    Container created
+8m30s       Warning   BackOff             pod/client-pod                         Back-off restarting failed container client in pod client-pod_dso202-practical(bab5c40d-6fc5-48ee-9e07-57b32b6ba8c2)
+8m30s       Warning   BackOff             pod/web-pod                            Back-off restarting failed container web in pod web-pod_dso202-practical(f9414870-9296-42fc-9c9c-86ae4a6e319f)
+8m29s       Warning   BackOff             pod/web-deployment-84b8695bc4-jwbdz    Back-off restarting failed container web in pod web-deployment-84b8695bc4-jwbdz_dso202-practical(697491b9-4488-4a30-985a-283e1862dca7)
+8m24s       Normal    Pulled              pod/web-pod                            Container image "nginx:1.30-alpine" already present on machine and can be accessed by the pod
+8m24s       Normal    Created             pod/web-pod                            Container created
+8m24s       Normal    Started             pod/web-pod                            Container started
+8m23s       Normal    Created             pod/client-pod                         Container created
+8m23s       Normal    Started             pod/client-pod                         Container started
+8m23s       Normal    Created             pod/web-deployment-84b8695bc4-jwbdz    Container created
+8m23s       Normal    Pulled              pod/client-pod                         Container image "busybox:1.37" already present on machine and can be accessed by the pod
+8m23s       Normal    Pulled              pod/web-deployment-84b8695bc4-jwbdz    Container image "nginx:1.30-alpine" already present on machine and can be accessed by the pod
+8m23s       Normal    Started             pod/web-deployment-84b8695bc4-jwbdz    Container started

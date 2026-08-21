@@ -61,17 +61,10 @@ spec:
           protocol: TCP
 
       resources:
-        # requests = what is guaranteed. The scheduler subtracts the request
-        # from a node's allocatable capacity when deciding whether the Pod
-        # fits. An under-stated request risks eviction; an over-stated one
-        # wastes capacity.
         requests:
           cpu: 50m
           memory: 64Mi
 
-        # limits = the ceiling. Exceeding the memory limit terminates the
-        # container with reason OOMKilled. Exceeding the CPU limit only
-        # throttles it, because CPU is compressible and memory is not.
         limits:
           cpu: 200m
           memory: 128Mi

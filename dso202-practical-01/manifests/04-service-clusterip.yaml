@@ -1,15 +1,3 @@
-# =============================================================================
-# File        : manifests/04-service-clusterip.yaml
-# Practical   : DSO202 Practical 1
-# Apply with  : kubectl apply -f manifests/04-service-clusterip.yaml
-# Verify with : kubectl get endpointslice \
-#                 -l kubernetes.io/service-name=web-clusterip
-#               kubectl exec client-pod -- wget -qO- http://web-clusterip
-#
-# DNS NAME CREATED: web-clusterip.dso202-practical.svc.cluster.local
-#   Within this namespace the short name 'web-clusterip' is enough.
-#   From another namespace, 'web-clusterip.dso202-practical' is required.
-# =============================================================================
 apiVersion: v1
 kind: Service
 metadata:
@@ -21,28 +9,16 @@ metadata:
     dso202/practical: "01"
     dso202/managed-by: declarative
 spec:
-  # ClusterIP is the default type and is reachable only from inside the
-  # cluster. It is stated explicitly so that the choice is visible.
   type: ClusterIP
 
-  # Which Pods receive the traffic. Note the difference from a Deployment's
-  # selector: this is a plain map, with no 'matchLabels' wrapper.
-  #
-  # A Pod is sent traffic only if it BOTH matches this selector AND is
-  # currently passing its readiness probe.
   selector:
     app: web
     tier: frontend
 
   ports:
     - name: http
-      # The port on the SERVICE. Clients connect here.
       port: 80
-      # The port on the POD that traffic is forwarded to. Given as the NAME of
-      # the container port declared in Listing 5 rather than the number 80.
       targetPort: http
       protocol: TCP
 
-  # How long a client is pinned to the same Pod. 'None' means every connection
-  # is balanced independently.
   sessionAffinity: None
