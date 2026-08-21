@@ -1,26 +1,13 @@
-# =============================================================================
-# File        : manifests/00-namespace.yaml
-# Practical   : DSO202 Practical 1
-# Apply with  : kubectl apply -f manifests/00-namespace.yaml
-# Prefix 00-  : applied first; every later object depends on it existing.
-# =============================================================================
 apiVersion: v1
 kind: Namespace
 metadata:
-  # Namespaces are cluster-scoped, so this name must be unique across the
-  # whole cluster, not just within a namespace.
   name: dso202-practical
 
-  # A namespace is labelled for the same reason a Pod is: so that it can be
-  # selected. 'kubectl get namespace -l dso202/practical=01' finds it without
-  # relying on the name.
   labels:
     dso202/practical: "01"
     dso202/managed-by: declarative
 
   annotations:
-    # Annotations carry information for humans and tools. They are never used
-    # as selectors, which is the difference between an annotation and a label.
     dso202.cst.edu.bt/description: "Namespace for DSO202 Practical 1 workloads"
     dso202.cst.edu.bt/owner: "student_name"
     dso202.cst.edu.bt/date: "2026-08-11"
