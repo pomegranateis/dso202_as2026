@@ -1,0 +1,50 @@
+LAST SEEN   TYPE     REASON                  OBJECT                                  MESSAGE
+10h         Normal   ExternalProvisioning    persistentvolumeclaim/data-postgres-0   Waiting for a volume to be created either by the external provisioner 'rancher.io/local-path' or manually by the system administrator. If volume creation is delayed, please verify that the provisioner is running and correctly registered.
+10h         Normal   SuccessfulCreate        statefulset/postgres                    Create Claim data-postgres-0 Pod postgres-0 in StatefulSet postgres success
+10h         Normal   Provisioning            persistentvolumeclaim/data-postgres-0   External provisioner is provisioning volume for claim "dso202-practical-02/data-postgres-0"
+10h         Normal   WaitForFirstConsumer    persistentvolumeclaim/data-postgres-0   waiting for first consumer to be created before binding
+10h         Normal   ProvisioningSucceeded   persistentvolumeclaim/data-postgres-0   Successfully provisioned volume pvc-2675ef6d-6846-4866-adc5-b7a5020e83d6
+10h         Normal   Scheduled               pod/postgres-0                          Successfully assigned dso202-practical-02/postgres-0 to worker-node-1
+10h         Normal   Pulling                 pod/postgres-0                          Pulling image "postgres:18-alpine"
+10h         Normal   Pulled                  pod/postgres-0                          Successfully pulled image "postgres:18-alpine" in 18.359s (18.359s including waiting). Image size: 120060019 bytes.
+10h         Normal   Created                 pod/postgres-0                          Container created
+10h         Normal   Started                 pod/postgres-0                          Container started
+10h         Normal   Killing                 pod/postgres-0                          Stopping container postgres
+10h         Normal   Started                 pod/postgres-0                          Container started
+10h         Normal   SuccessfulCreate        statefulset/postgres                    Create Pod postgres-0 in StatefulSet postgres successful
+10h         Normal   Created                 pod/postgres-0                          Container created
+10h         Normal   Scheduled               pod/postgres-0                          Successfully assigned dso202-practical-02/postgres-0 to worker-node-1
+10h         Normal   Pulled                  pod/postgres-0                          Container image "postgres:18-alpine" already present on machine and can be accessed by the pod
+16m         Normal   SandboxChanged          pod/static-writer                       Pod sandbox changed, it will be killed and re-created.
+16m         Normal   SandboxChanged          pod/client                              Pod sandbox changed, it will be killed and re-created.
+16m         Normal   SandboxChanged          pod/webnote-1                           Pod sandbox changed, it will be killed and re-created.
+16m         Normal   SandboxChanged          pod/webnote-0                           Pod sandbox changed, it will be killed and re-created.
+16m         Normal   SandboxChanged          pod/webnote-2                           Pod sandbox changed, it will be killed and re-created.
+16m         Normal   Started                 pod/webnote-2                           Container started
+16m         Normal   Created                 pod/webnote-0                           Container created
+16m         Normal   Pulled                  pod/client                              Container image "busybox:1.37" already present on machine and can be accessed by the pod
+16m         Normal   Started                 pod/postgres-0                          Container started
+16m         Normal   Pulled                  pod/static-writer                       Container image "busybox:1.37" already present on machine and can be accessed by the pod
+16m         Normal   Created                 pod/static-writer                       Container created
+16m         Normal   Created                 pod/postgres-0                          Container created
+16m         Normal   Pulled                  pod/postgres-0                          Container image "postgres:18-alpine" already present on machine and can be accessed by the pod
+16m         Normal   Pulled                  pod/webnote-0                           Container image "busybox:1.37" already present on machine and can be accessed by the pod
+16m         Normal   Created                 pod/client                              Container created
+16m         Normal   Started                 pod/webnote-0                           Container started
+16m         Normal   Created                 pod/webnote-2                           Container created
+16m         Normal   Started                 pod/client                              Container started
+16m         Normal   Pulled                  pod/webnote-2                           Container image "busybox:1.37" already present on machine and can be accessed by the pod
+16m         Normal   SandboxChanged          pod/postgres-0                          Pod sandbox changed, it will be killed and re-created.
+16m         Normal   Pulled                  pod/webnote-1                           Container image "busybox:1.37" already present on machine and can be accessed by the pod
+16m         Normal   Created                 pod/webnote-1                           Container created
+16m         Normal   Started                 pod/webnote-1                           Container started
+16m         Normal   Created                 pod/webnote-0                           Container created
+16m         Normal   Created                 pod/webnote-1                           Container created
+16m         Normal   Started                 pod/webnote-1                           Container started
+16m         Normal   Pulled                  pod/webnote-1                           Container image "nginx:1.31-alpine" already present on machine and can be accessed by the pod
+16m         Normal   Started                 pod/webnote-0                           Container started
+16m         Normal   Pulled                  pod/webnote-0                           Container image "nginx:1.31-alpine" already present on machine and can be accessed by the pod
+16m         Normal   Started                 pod/static-writer                       Container started
+16m         Normal   Pulled                  pod/webnote-2                           Container image "nginx:1.31-alpine" already present on machine and can be accessed by the pod
+16m         Normal   Created                 pod/webnote-2                           Container created
+16m         Normal   Started                 pod/webnote-2                           Container started
