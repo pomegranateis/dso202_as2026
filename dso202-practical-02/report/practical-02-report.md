@@ -355,15 +355,290 @@ entirely a few seconds later. This is the direct contrast with Stage 2's
 disk was untouched until deleted by hand. One field —
 `reclaimPolicy` on the StorageClass — produced the entire difference.
 
-**Checkpoint reached:** the reason the claim was initially `Pending` is
-understood, the resize rejection was captured, and the node directory
-confirmed gone after the claim's deletion.
+### 3.4 Stage 4 — Why a Deployment Cannot Own State
+
+**What was done.** A Deployment with three replicas was pointed at a single
+shared PersistentVolumeClaim, to observe at first hand the failure modes a
+StatefulSet is designed to prevent, before StatefulSets were introduced.
+
+```
+$ kubectl apply -f manifests/08-deployment-shared-pvc.yaml
+$ kubectl rollout status deployment/shared-writer --timeout=180s
+$ kubectl get pods -l app=shared-writer -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName
+```
+
+![alt text](../evidence/22.png)
+
+**Observation 1.** All three replicas were scheduled onto `worker-node-2`,
+although the Deployment expresses no node preference anywhere. The claim was
+bound to a volume that exists on one node only, so no other node could
+accept these Pods — a storage decision removed the scheduler's freedom.
+
+```
+$ kubectl exec deploy/shared-writer -- cat /data/visitors.log
+```
+
+![alt text](../evidence/23.png)
+
+**Observation 2.** There is one set of data, not three. All three replicas
+wrote into the same file on the same volume. A stateless web server can
+tolerate this; two database processes writing to the same data directory
+would corrupt it. Nothing in the Deployment specification can give each
+replica its own volume, because the claim is named once in the Pod template
+and every replica uses that template.
+
+```
+$ kubectl delete pod -l app=shared-writer --field-selector status.phase=Running --wait=false
+$ sleep 15
+$ kubectl get pods -l app=shared-writer -o custom-columns=NAME:.metadata.name
+```
+
+![alt text](../evidence/24.png)
+
+**Observation 3.** No replica retained an identity across the restart —
+every Pod name is new. There is no way for an application, a monitoring
+system, or a peer Pod to refer to "the first replica" and mean the same
+process before and after deletion. Replicated databases require exactly
+that continuity, because members must find each other by a name that
+outlasts any individual Pod.
+
+```
+$ kubectl delete -f manifests/08-deployment-shared-pvc.yaml
+$ kubectl get pvc
+```
+
+![alt text](../evidence/25.png)
+
+This confirms the anti-pattern Deployment and its claim were fully removed,
+leaving only the Stage 2 static claim behind.
 
 ---
 
-*(Stages 4–8 to be added as the practical continues.)*
+### 3.5 Stage 5 — StatefulSets and Stable Identity
 
----
+**What was done.** A headless Service was created ahead of the StatefulSet
+so that Pods are addressable from the moment they become ready. The
+`webnote` StatefulSet was then applied and its ordered creation, per-ordinal
+storage, per-Pod DNS, volume privacy, and survival of identity/storage
+across Pod deletion were each verified in turn.
+
+```
+$ kubectl apply -f manifests/09-service-webnote.yaml
+$ kubectl get service webnote
+```
+
+![alt text](../evidence/26.png)
+
+This confirms the Service is headless (`CLUSTER-IP: None`) — no virtual
+address is allocated; the Service exists purely to publish DNS records.
+
+```
+$ kubectl apply -f manifests/10-statefulset-webnote.yaml
+$ kubectl get pods -l app=webnote -w
+```
+
+![alt text](../evidence/27.png)
+
+This confirms ordered, sequential creation (`OrderedReady`, the default):
+`webnote-1` was not created until `webnote-0` reached `1/1 Running`, and
+`webnote-2` waited on `webnote-1` in turn. Pod names are fixed ordinals
+(`webnote-0`, `-1`, `-2`), not random hash suffixes.
+
+```
+$ kubectl get pvc -l app=webnote
+```
+
+![alt text](../evidence/28.png)
+
+This confirms three separate claims were generated from the single
+`volumeClaimTemplate`, named `<template>-<statefulset>-<ordinal>`, and are
+selectable by label because the template sets labels under
+`volumeClaimTemplates[].metadata`.
+
+```
+$ kubectl get pods -l app=webnote -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName,IP:.status.podIP
+```
+
+![alt text](../evidence/29.png)
+
+This confirms placement is free again, unlike Stage 4: the three Pods are
+spread across both worker nodes because each ordinal owns its own volume
+rather than sharing one.
+
+```
+$ kubectl apply -f manifests/11-pod-client.yaml
+$ kubectl exec client -- nslookup webnote.dso202-practical-02.svc.cluster.local
+```
+
+![alt text](../evidence/30.png)
+
+This confirms one Service name resolved to all three Pod addresses — a
+headless Service publishes per-Pod DNS records instead of a single virtual
+ClusterIP.
+
+```
+$ kubectl exec client -- wget -qO- http://webnote-1.webnote.dso202-practical-02.svc.cluster.local
+```
+
+![alt text](../evidence/31.png)
+
+This confirms one specific Pod (`webnote-1`) is individually addressable by
+its own DNS name, distinct from the address of the set as a whole.
+
+```
+$ kubectl exec webnote-0 -- sh -c 'echo "note added by hand in Stage 5" >> /usr/share/nginx/html/index.html'
+$ kubectl exec client -- wget -qO- http://webnote-0.webnote.dso202-practical-02.svc.cluster.local
+$ kubectl exec client -- wget -qO- http://webnote-1.webnote.dso202-practical-02.svc.cluster.local
+```
+
+![alt text](../evidence/32.png)
+
+This confirms the volumes are genuinely private: a note written by hand
+into `webnote-0`'s file appears only on `webnote-0`; `webnote-1` is
+untouched. Three replicas of one workload hold three unrelated sets of
+content — exactly what Stage 4 could not achieve.
+
+```
+$ kubectl delete pod webnote-1
+$ kubectl wait --for=condition=Ready pod/webnote-1 --timeout=120s
+$ kubectl get pod webnote-1 -o custom-
+
+$ kubectl get pvc content-webnote-1
+
+$ kubectl exec client -- wget -qO- http://webnote-1.webnote.dso202-practical-02.svc.cluster.local
+```
+
+![alt text](../evidence/33.png)
+
+This confirms all four facts the guide highlights at once: the Pod name is
+unchanged (`webnote-1`); the same claim was reattached rather than recreated
+(its age, 18m, exceeds the replacement Pod's age); the `created:` timestamp
+is untouched, so the file was not regenerated; and the Pod's IP address
+changed (`10.244.1.4` → `10.244.1.5`), which is precisely why an application
+must be configured with the DNS name and never with an address.
+
+### 3.6 Stage 6 — Scaling, Retention, and Ordered Updates
+
+**What was done.** The `webnote` StatefulSet was scaled up, then down, then
+back up, to observe what happens to generated claims at each step. A
+partitioned rolling update was carried out by editing the committed manifest
+(rather than `kubectl patch`), first updating a single ordinal, then
+completing the rollout across the rest. Finally the StatefulSet itself was
+deleted and recreated to observe the `whenDeleted` retention policy.
+
+```
+$ kubectl scale statefulset webnote --replicas=4
+$ kubectl wait --for=condition=Ready pod/webnote-3 --timeout=120s
+$ kubectl get pvc -l app=webnote --no-headers | wc -l
+```
+
+This confirms scaling up created storage automatically: a fourth claim
+(`content-webnote-3`) was generated from the same `volumeClaimTemplate` the
+moment the fourth replica was requested.
+
+```
+$ kubectl scale statefulset webnote --replicas=2
+$ kubectl get pods -l app=webnote -w
+```
+
+![alt text](../evidence/34.png)
+
+This confirms termination proceeded in descending ordinal order, one Pod at
+a time: `webnote-3` was removed first, then `webnote-2`, leaving `webnote-0`
+and `webnote-1` (the lowest ordinals) running. This ordering is what a
+database designating ordinal 0 as its initial primary would depend on.
+
+```
+$ kubectl get pvc -l app=webnote
+```
+
+![alt text](../evidence/35.png)
+
+This confirms two Pods were running but all four claims remained. The
+default `whenScaled: Retain` policy kept the data of the removed replicas —
+scaling down is often a reaction to a problem, so destroying data as a side
+effect would be unrecoverable.
+
+```
+$ kubectl scale statefulset webnote --replicas=3
+$ kubectl wait --for=condition=Ready pod/webnote-2 --timeout=120s
+$ kubectl exec client -- wget -qO- http://webnote-2.webnote.dso202-practical-02.svc.cluster.local
+```
+
+![alt text](../evidence/36.png)
+
+This confirms the original `created:` timestamp (`03:32:23`) survived:
+ordinal 2 was deleted and later recreated, and it reclaimed the volume that
+belonged to ordinal 2 purely by name. Identity is what links a replica to
+its data, and the ordinal is the identity.
+
+```
+# manifests/10-statefulset-webnote.yaml edited: partition 0 -> 2,
+# image nginx:1.30-alpine -> nginx:1.31-alpine (nginx container only)
+
+$ kubectl apply -f manifests/10-statefulset-webnote.yaml
+$ sleep 30
+$ kubectl get pods -l app=webnote -o custom-columns=NAME:.metadata.name,IMAGE:.spec.containers[0].image
+```
+
+![alt text](../evidence/37.png)
+
+This confirms `partition: 2` restricted the update to Pods whose ordinal is
+≥ 2. Only `webnote-2` picked up the new image; ordinals 0 and 1 were left
+untouched, demonstrating how a new version can be trialled on a single
+member before the rest of the set is committed to it — a capability with no
+equivalent in a Deployment.
+
+```
+# manifests/10-statefulset-webnote.yaml edited: partition 2 -> 0
+
+$ kubectl apply -f manifests/10-statefulset-webnote.yaml
+$ kubectl rollout status statefulset/webnote --timeout=300s
+$ kubectl get pods -l app=webnote -o custom-columns=NAME:.metadata.name,IMAGE:.spec.containers[0].image
+```
+
+![alt text](../evidence/38.png)
+
+This confirms the remaining Pods were updated in descending order (ordinal
+1, then ordinal 0), completing the rollout.
+
+```
+$ kubectl exec client -- wget -qO- http://webnote-0.webnote.dso202-practical-02.svc.cluster.local
+```
+
+![alt text](../evidence/39.png)
+
+This confirms each replacement Pod reattached its own volume during the
+image upgrade: the original `created:` timestamp and the hand-written note
+from Stage 5 both survived, proving the rolling update changed only the
+container image, not the data.
+
+```
+$ kubectl delete statefulset webnote
+$ kubectl get pods -l app=webnote
+# ~15s later:
+$ kubectl get pods -l app=webnote
+$ kubectl get pvc -l app=webnote --no-headers | wc -l
+```
+
+![alt text](../evidence/40.png)
+
+This confirms every Pod was removed by deleting the StatefulSet, but all
+four claims remained, because `whenDeleted: Retain` is set. On this cluster,
+deleting a StatefulSet is a recoverable mistake.
+
+```
+$ kubectl apply -f manifests/10-statefulset-webnote.yaml
+$ kubectl rollout status statefulset/webnote --timeout=300s
+$ kubectl exec client -- wget -qO- http://webnote-1.webnote.dso202-practical-02.svc.cluster.local
+```
+
+![alt text](../evidence/41.png)
+
+This confirms the workload returned with its complete history intact: the
+original Stage 5 `created:` timestamp, and a `started:` line for every
+restart, scale event, and the StatefulSet's own deletion and recreation —
+none of which touched the underlying volumes.
 
 ## 4. Analysis
 
