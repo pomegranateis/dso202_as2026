@@ -1,0 +1,79 @@
+{
+  "info": {
+    "name": "DSO202 Assignment 1 - CRUD Verification",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Create Task",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Finish DSO202 assignment\",\n  \"description\": \"Deploy 3-tier app\",\n  \"status\": \"pending\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/tasks",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "tasks"]
+        }
+      }
+    },
+    {
+      "name": "2. List Tasks",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:8080/api/tasks",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "tasks"]
+        }
+      }
+    },
+    {
+      "name": "3. Get One Task",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:8080/api/tasks/{{taskId}}",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "tasks", "{{taskId}}"]
+        }
+      }
+    },
+    {
+      "name": "4. Update Task",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"done\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/tasks/{{taskId}}",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "tasks", "{{taskId}}"]
+        }
+      }
+    },
+    {
+      "name": "5. Delete Task",
+      "request": {
+        "method": "DELETE",
+        "url": {
+          "raw": "http://localhost:8080/api/tasks/{{taskId}}",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "tasks", "{{taskId}}"]
+        }
+      }
+    }
+  ],
+  "variable": [{ "key": "taskId", "value": "" }]
+}
