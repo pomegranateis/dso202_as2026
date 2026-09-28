@@ -1,0 +1,61 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: viewer-core
+  labels:
+    rbac.dso202/aggregate-to-viewer: "true"
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "persistentvolumeclaims", "events"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: viewer-workloads
+  labels:
+    rbac.dso202/aggregate-to-viewer: "true"
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: viewer-cluster-scoped
+  labels:
+    rbac.dso202/aggregate-to-viewer: "true"
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "namespaces"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tasktracker-viewer
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.dso202/aggregate-to-viewer: "true"
+rules: []
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-viewer
+  namespace: dso202-assignment-01
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-viewer-binding
+subjects:
+  - kind: ServiceAccount
+    name: cluster-viewer
+    namespace: dso202-assignment-01
+roleRef:
+  kind: ClusterRole
+  name: tasktracker-viewer
+  apiGroup: rbac.authorization.k8s.io
