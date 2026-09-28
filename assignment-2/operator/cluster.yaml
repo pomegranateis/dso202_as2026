@@ -1,0 +1,37 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: tasks-pg
+  namespace: dso202-assignment-01
+spec:
+  instances: 2
+  imageName: ghcr.io/cloudnative-pg/postgresql:18-minimal-trixie
+  imagePullPolicy: IfNotPresent
+  storage:
+    size: 1Gi
+    storageClass: standard
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  bootstrap:
+    initdb:
+      database: taskdb
+      owner: taskuser
+      secret:
+        name: tasks-pg-credentials
+      postInitApplicationSQL:
+        - >-
+          CREATE TABLE public.tasks (
+          id serial PRIMARY KEY,
+          title varchar(255) NOT NULL,
+          description text,
+          status varchar(20) NOT NULL DEFAULT 'pending'
+            CONSTRAINT tasks_status_check
+            CHECK (status IN ('pending', 'in_progress', 'done')),
+          created_at timestamptz NOT NULL DEFAULT now()
+          )
+        - ALTER TABLE public.tasks OWNER TO taskuser

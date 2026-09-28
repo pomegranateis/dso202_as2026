@@ -4,7 +4,7 @@ metadata:
   name: app-config
   namespace: dso202-assignment-01
 data:
-  DB_HOST: "db-svc"
+  DB_HOST: "tasks-pg-rw"
   DB_PORT: "5432"
   DB_NAME: "taskdb"
   APP_PORT: "8080"
