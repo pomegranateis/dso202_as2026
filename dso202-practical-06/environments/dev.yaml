@@ -1,0 +1,10 @@
+# environments/dev.yaml - overrides for the development release.
+replicaCount: 1
+page:
+  environment: dev
+  message: "Development build - not for customers"
+service:
+  type: NodePort
+  # 30081, not 30080: port 30080 is already held by the ingress-nginx
+  # controller Service from Assignment 2, and two Services cannot share a NodePort.
+  nodePort: 30081
