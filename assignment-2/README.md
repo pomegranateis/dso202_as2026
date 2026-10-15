@@ -397,25 +397,25 @@ The frontend renders `BACKEND_URL` into `/config.js` once at container start, so
 
 ### Verify the backend is reachable from the browser
 
-The screenshots below were captured on the original cluster, when the Ingress was reached at `http://localhost:30080`. The same check on the rebuilt cluster is at `http://localhost:8081`.
+`http://localhost:8081` shows "BACKEND + DB ONLINE" and lists the tasks from the operator-managed database. Task #3 was created through the form in the browser, so the full path (Ingress, backend, database) works from a browser.
 
-![alt text](evidence/12.png)
-![alt text](evidence/13.png)
-![alt text](evidence/14.png)
-
-**Persistence test task" from Assignment 1 would still be in the list, and that was wrong. When we removed the old database Deployment in Step 2, we also deleted db-pvc. The StatefulSet then got a brand-new volume and re-ran the seed script. That's why you only see the three seed tasks and your new one got id #4. Nothing is broken, but the README should say the Deployment→StatefulSet move was a fresh start, not a data migration.**
+![Task Tracker at localhost:8081, BACKEND + DB ONLINE, task #3 created from the browser](evidence/ingress-4.png)
 
 ### TLS termination and name-based virtual hosting (2.2.1.2 and 2.2.1.3)
 
 The same IP and port (`127.0.0.1:443`) serve two different applications depending only on the hostname, and the traffic is encrypted up to the controller and plain HTTP behind it. That's name-based virtual hosting plus TLS termination. Subject and issuer are identical, so the certificate is self-signed.
 
-![TLS 1.3 handshake, self-signed certificate, frontend and API on the same port by hostname](evidence/ingress-6.png)
+![TLS 1.3 handshake, self-signed certificate, frontend and API on the same port by hostname](evidence/ingress-5.png)
+
+In the browser, `https://tasktracker.local` (resolved through `/etc/hosts`) first showed `NET::ERR_CERT_AUTHORITY_INVALID`, as expected for a self-signed certificate. After accepting the warning, the same app loaded over HTTPS with "BACKEND + DB ONLINE". The address bar shows "Not secure" because the certificate is not from a trusted issuer.
+
+![Task Tracker at https://tasktracker.local over the self-signed certificate](evidence/ingress-6.png)
 
 ### Ingress annotations (2.2.3)
 
 `tasktracker-tls-ingress` carries `nginx.ingress.kubernetes.io/limit-rps: 2`. Thirty rapid requests to the API host start returning `503` after a short burst, while the same requests to `localhost:8081` (first Ingress, no annotation) all return `200`.
 
-![limit-rps annotation, limited vs unlimited request results](evidence/ingress-8.png)
+![limit-rps annotation, limited vs unlimited request results](evidence/ingress-7.png)
 
 ### ClusterRoles, aggregation and ClusterRoleBindings (2.3.1 and 2.3.2)
 
