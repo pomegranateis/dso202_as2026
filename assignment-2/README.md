@@ -1,7 +1,7 @@
 # DSO202 — Assignment 2: Extending the Task Tracker with Unit II Concepts
 
 **Namespace:** `dso202-assignment-01` (reused from Assignment 1)
-**Cluster:** `kind` (`dso202` — 1 control-plane node, 2 worker nodes, Kubernetes v1.36.1)
+**Cluster:** `kind` (`dso202` — 1 control-plane node, 2 worker nodes, Kubernetes v1.36.1). Recreated for this assignment from `kind-cluster.yaml` with an `ingress-ready=true` control-plane and host ports `8081` (HTTP) and `443` (HTTPS); see Section 5.1.
 
 Assignment 2 takes the three-tier Task Tracker deployed in Assignment 1 and rebuilds parts of it using Unit II concepts: StatefulSets, Ingress, RBAC beyond a single namespace, and Operators. The three tier images and the application code are unchanged. The graded effort is again the Kubernetes configuration.
 
@@ -16,7 +16,8 @@ Assignment 2 takes the three-tier Task Tracker deployed in Assignment 1 and rebu
 | Transport security | None | Self-signed TLS termination, name-based virtual hosts |
 | RBAC | One namespaced `Role` and `RoleBinding` | Aggregated `ClusterRole`, `ClusterRoleBinding`, and a Pod authenticating with a ServiceAccount token |
 | `DB_HOST` | `db-svc` | `tasks-pg-rw` |
-| `BACKEND_URL` | `http://backend-svc:8080` | `http://localhost:30080` |
+| `BACKEND_URL` | `http://backend-svc:8080` | `http://localhost:8081` |
+| kind cluster | Host port `30080` mapped for the frontend NodePort | Control-plane labelled `ingress-ready=true`; host `8081` → node `80`, host `443` → node `443` |
 
 ---
 
@@ -25,7 +26,7 @@ Assignment 2 takes the three-tier Task Tracker deployed in Assignment 1 and rebu
 ```
 assignment-2/
 ├── README.md
-├── kind-cluster.yaml
+├── kind-cluster.yaml            # ingress-ready label, host ports 8081 and 443
 ├── namespace.yaml
 ├── common-manifests/
 │   ├── configmap.yaml
@@ -60,13 +61,14 @@ The `tls/` folder is listed in `.gitignore`. The TLS Secret was created imperati
 ## 3. Request Flow
 
 ```
-Browser ── http://localhost:30080 ──▶ kind control-plane container (host port 30080)
+Browser ── http://localhost:8081 ─────────▶ kind control-plane container (host 8081 → node 80)
+Browser ── https://tasktracker.local ─────▶ kind control-plane container (host 443  → node 443)
                                           │
                                           ▼
-                              ingress-nginx controller (NodePort 30080 → 80)
+                  ingress-nginx controller (hostPort 80/443, on the ingress-ready node)
                                           │
                      ┌────────────────────┴───────────────────┐
-                  path /                                 path /api
+         path / or host tasktracker.local       path /api or host api.tasktracker.local
                      ▼                                        ▼
                frontend-svc (ClusterIP)               backend-svc (ClusterIP)
                                                               │
@@ -116,16 +118,25 @@ The Assignment 1 Deployment and PVC were deleted and replaced with a single `Sta
 
 ### 5.1 Ingress controller (2.2.2.1)
 
-An `ingress-nginx` controller was already installed in the cluster before this assignment. Applying the kind-flavoured manifest again reported almost everything as `unchanged`, so it was reused rather than reinstalled. Two problems had to be solved for it to be reachable from the host:
+The Assignment 1 cluster only mapped host port `30080`, so the kind cluster was **recreated** the standard way for Ingress on kind (`kind-cluster.yaml`):
 
-- Its Service was type `LoadBalancer` and stayed at `<pending>` forever, because kind has no cloud load balancer.
-- The cluster's only host port mapping is `30080` on the control-plane container (from `kind-cluster.yaml`), while the controller Pod was scheduled on `dso202-worker2`.
+- The control-plane node carries the label `ingress-ready=true` (kind's `labels:` field).
+- `extraPortMappings` forward host ports into that node. Host port `80` is already used by a local GitLab nginx on this machine, so HTTP is mapped as host `8081` → node `80`. HTTPS uses the normal port, host `443` → node `443`.
+- The node image is pinned to `kindest/node:v1.36.1` by digest, so the rebuilt cluster runs the same Kubernetes version.
 
-The fix was to patch the controller's Service to `NodePort` with the HTTP node port set to `30080`, and `externalTrafficPolicy: Cluster` so traffic arriving at the control-plane node is forwarded to the Pod on another node. The frontend Service was first changed to `ClusterIP` to free port `30080`. This works because the Ingress makes the frontend's own NodePort unnecessary.
+The controller was installed from the kind provider manifest of the last ingress-nginx release, `controller-v1.15.1`:
 
-`curl http://localhost:30080` returned an nginx `404` before any Ingress existed, which confirmed the path from host to controller was working.
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.15.1/deploy/static/provider/kind/deploy.yaml
+kubectl patch deployment ingress-nginx-controller -n ingress-nginx --type merge \
+  -p '{"spec":{"template":{"spec":{"nodeSelector":{"ingress-ready":"true"}}}}}'
+```
 
-**Note:** the upstream Kubernetes project announced the retirement of ingress-nginx, with maintenance ending in March 2026 and no further releases or security fixes afterwards. Existing installations keep working, which is why it remains fine for this exercise, but it would not be a sensible choice for a new production deployment. The Kubernetes project recommends Gateway API or another controller (see <https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/>).
+The manifest gives the controller `hostPort` 80 and 443 and a toleration for the control-plane taint, but its only `nodeSelector` is `kubernetes.io/os: linux`. On a cluster with worker nodes the Pod can therefore land on a worker, which has no host port mappings (this is what happened in the first attempt, when it ran on `dso202-worker2`). The patch adds `ingress-ready: "true"` to the `nodeSelector`, so the Pod always runs on the control-plane, where the ports are mapped. The controller's Service stays `LoadBalancer` with `EXTERNAL-IP <pending>`, which is expected on kind and harmless: traffic reaches the Pod through the host ports, not through the Service.
+
+With the controller running on `dso202-control-plane`, `curl http://localhost:8081` returned an nginx `404` before any Ingress existed, which confirmed the path from host to controller was working. `https://localhost` also returned `404`.
+
+**Note:** the upstream Kubernetes project announced the retirement of ingress-nginx, with maintenance ending in March 2026 and no further releases or security fixes afterwards. The GitHub repository is now archived; `controller-v1.15.1` (19 March 2026) is the final release, and its kind manifest is still downloadable. Existing installations keep working, which is why it remains fine for this exercise, but it would not be a sensible choice for a new production deployment. The Kubernetes project recommends Gateway API or another controller (see <https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/>).
 
 ### 5.2 Basic routing rules (2.2.1.1) — `ingress/ingress.yaml`
 
@@ -134,13 +145,13 @@ The fix was to patch the controller's Service to `NodePort` with the HTTP node p
 | `/api` | `backend-svc:8080` |
 | `/` | `frontend-svc:8080` |
 
-Both routes were tested through the single entry point: `/` returned the frontend HTML (`200`) and `/api/status` returned `{"status":"ok","db":"connected"}`. The backend is now reachable from outside the cluster without ever being exposed as a NodePort.
+Both routes were tested through the single entry point `http://localhost:8081`: `/` returned the frontend HTML (`200`) and `/api/status` returned `{"status":"ok","db":"connected"}`. The backend is now reachable from outside the cluster without ever being exposed as a NodePort.
 
 ### 5.3 Fixing the browser-side backend URL
 
 Assignment 1 documented that the UI showed "Backend unreachable", because `BACKEND_URL` was a cluster-internal name (`backend-svc`) that a browser cannot resolve. The frontend renders `BACKEND_URL` into `config.js` once at container start, which was confirmed by fetching `/config.js`.
 
-Because the Ingress puts frontend and backend on the same origin, `BACKEND_URL` was changed to `http://localhost:30080` in the ConfigMap and the frontend Deployment was restarted (`kubectl rollout restart`), since a running container does not re-read its ConfigMap. The UI then showed "BACKEND + DB ONLINE". A task was created through the form and another had its status changed from the browser, so the full path (Ingress, backend, database) works from a browser.
+Because the Ingress puts frontend and backend on the same origin, `BACKEND_URL` was changed in the ConfigMap to the Ingress address, now `http://localhost:8081`. A running container does not re-read its ConfigMap, so the frontend has to be (re)started after the change; in the rebuilt cluster the ConfigMap was applied before the frontend was created. `curl http://localhost:8081/config.js` returned `BACKEND_URL: "http://localhost:8081"`. The UI then showed "BACKEND + DB ONLINE". A task was created through the form and another had its status changed from the browser, so the full path (Ingress, backend, database) works from a browser.
 
 ### 5.4 TLS termination and name-based virtual hosting (2.2.1.2, 2.2.1.3) — `ingress/ingress-tls.yaml`
 
@@ -161,17 +172,17 @@ A second Ingress, `tasktracker-tls-ingress`, references the `tasktracker-tls` Se
 | `tasktracker.local` | `frontend-svc:8080` |
 | `api.tasktracker.local` | `backend-svc:8080` |
 
-Only HTTP is mapped to the host, so HTTPS was tested through the kind node's Docker-network IP and the controller's HTTPS NodePort (`32185`), with `curl --resolve` supplying the hostname instead of editing `/etc/hosts`. The same IP and port served the frontend for `tasktracker.local` (`HTTP/2 200`, `text/html`) and the backend JSON for `api.tasktracker.local`, chosen only by the hostname. The certificate's `subject` and `issuer` were identical (`CN=tasktracker.local; O=DSO202`), which is what identifies it as self-signed. TLS terminates at the controller; traffic from the controller to the Pods is plain HTTP.
+Host port `443` is mapped to the controller, so HTTPS was tested on the normal port with `curl --resolve tasktracker.local:443:127.0.0.1` (and the same for `api.tasktracker.local`) supplying the hostname. For the browser, both names were added to `/etc/hosts` as `127.0.0.1`. The same IP and port served the frontend for `tasktracker.local` (`HTTP/2 200`, `text/html`) and the backend JSON for `api.tasktracker.local`, chosen only by the hostname. The connection used TLS 1.3, and the certificate's `subject` and `issuer` were identical (`CN=tasktracker.local; O=DSO202`), which is what identifies it as self-signed. TLS terminates at the controller; traffic from the controller to the Pods is plain HTTP.
 
-The first Ingress has no host, so it keeps serving `localhost:30080` unchanged.
+The first Ingress has no host, so it keeps serving `localhost:8081` unchanged, and it also catches any hostname the second Ingress does not list.
 
 ### 5.5 Annotations (2.2.3)
 
-The annotation `nginx.ingress.kubernetes.io/limit-rps: "2"` was added to `tasktracker-tls-ingress`. Thirty rapid requests to the API host returned twelve `200`s, then `503`, then a single `200`, then `503` for the remainder. The controller allowed a short burst, rejected requests over the limit, and let one through as its allowance refilled. The limit applies only to this Ingress, so the browser UI on the first Ingress was unaffected.
+The annotation `nginx.ingress.kubernetes.io/limit-rps: "2"` was added to `tasktracker-tls-ingress`. Thirty rapid requests to `https://api.tasktracker.local/api/status` returned a burst of `200`s (thirteen), then `503`s; in some runs a single `200` slipped through part-way as the allowance refilled. The controller allowed a short burst and rejected requests over the limit. The same thirty requests to `http://localhost:8081/api/status`, served by the first Ingress without the annotation, all returned `200`. The limit applies only to the Ingress that carries it, so the browser UI on the first Ingress was unaffected.
 
 ### 5.6 Traefik (2.2.2.2) — written comparison only
 
-Traefik was **not installed**. A second controller would compete for the same host ports on a single-node-mapped kind cluster without adding new evidence. The comparison:
+Traefik was **not installed**. A second controller would compete for the same host ports 80 and 443 on the single `ingress-ready` node without adding new evidence. The comparison:
 
 | Aspect | NGINX Ingress Controller | Traefik |
 | --- | --- | --- |
@@ -309,7 +320,7 @@ The figures match the arithmetic exactly. Three Pods (backend, frontend, `db-sta
 
 ## 9. Evidence
 
-Screenshots are in `evidence/`, numbered in the order they were captured.
+Screenshots are in `evidence/`, numbered in the order they were captured. The Ingress screenshots (`ingress-*.png`) were retaken after the cluster was recreated for Ingress (Section 5.1) and replace the original Ingress figures.
 
 ### Convert the database tier from Deployment to StatefulSet
 
@@ -358,26 +369,35 @@ Then confirm you're back to a clean single-instance state:
 
 ![alt text](evidence/8.png)
 
+### Recreate the kind cluster for Ingress (2.2.2.1)
+
+The control-plane node carries `ingress-ready=true`, and only it maps host ports: `8081` → `80` and `443` → `443`. The old `30080` mapping is gone.
+
+![Nodes with the ingress-ready label and the control-plane port mappings](evidence/ingress-1.png)
+
+### Install the ingress-nginx controller (2.2.2.1)
+
+The controller Pod runs on `dso202-control-plane`, the `ingress-ready` node. `http://localhost:8081` returns nginx `404` because no Ingress exists yet, which shows the host reaches the controller.
+
+![Controller Pod on the control-plane and the 404 from localhost:8081](evidence/ingress-2.png)
+
 ### Create the Ingress resource (2.2.1.1, basic routing rules)
 
-![alt text](evidence/9.png)
-![alt text](evidence/10.png)
+`tasktracker-ingress` sends `/` to `frontend-svc` and `/api` to `backend-svc`, both through `http://localhost:8081`.
 
-**If you open http://localhost:30080 in the browser right now, the UI will load, but the "backend unreachable" banner will probably still be there. BACKEND_URL in the ConfigMap still says http://backend-svc:8080, which a browser can't resolve. Fixing that is the next step. It's a real ConfigMap change followed by a frontend restart, so it deserves its own step.**
+![Ingress resource, / returning 200 and /api/status returning connected](evidence/ingress-3.png)
 
 ### Fix the browser's backend URL
-Before changing anything, check what the frontend actually hands to the browser. The image guide says the container renders BACKEND_URL into a served config file at startup
+
+The frontend renders `BACKEND_URL` into `/config.js` once at container start, so the ConfigMap value must be the address the browser uses: `http://localhost:8081`.
 
 ### Point BACKEND_URL at the Ingress
-Update the ConfigMap in your Assignment 2 folder (Assignment 1's copy stays untouched as its own record)
 
-A running container doesn't re-read its ConfigMap. The value was rendered into config.js once at startup, so the frontend Pod has to be restarted
-
-![alt text](evidence/11.png)
+`common-manifests/configmap.yaml` sets `BACKEND_URL: "http://localhost:8081"`. A running container doesn't re-read its ConfigMap, so the frontend Pod has to be (re)started after any change.
 
 ### Verify the backend is reachable from the browser
 
-The live cluster shares this ConfigMap with your Assignment 1 setup, so the running state now reflects Assignment 2. That's fine, since Assignment 1's evidence is already captured. Just don't re-apply Assignment 1's ConfigMap later, or the banner will come back.
+The screenshots below were captured on the original cluster, when the Ingress was reached at `http://localhost:30080`. The same check on the rebuilt cluster is at `http://localhost:8081`.
 
 ![alt text](evidence/12.png)
 ![alt text](evidence/13.png)
@@ -387,18 +407,15 @@ The live cluster shares this ConfigMap with your Assignment 1 setup, so the runn
 
 ### TLS termination and name-based virtual hosting (2.2.1.2 and 2.2.1.3)
 
-The same IP and port serve two different applications depending only on the hostname, and the traffic is encrypted up to the controller and plain HTTP behind it. That's name-based virtual hosting plus TLS termination.
+The same IP and port (`127.0.0.1:443`) serve two different applications depending only on the hostname, and the traffic is encrypted up to the controller and plain HTTP behind it. That's name-based virtual hosting plus TLS termination. Subject and issuer are identical, so the certificate is self-signed.
 
-![alt text](evidence/15.png)
-![alt text](evidence/16.png)
+![TLS 1.3 handshake, self-signed certificate, frontend and API on the same port by hostname](evidence/ingress-6.png)
 
 ### Ingress annotations (2.2.3)
 
-The head output should show an annotations: block under metadata:, and apply should say configured.
+`tasktracker-tls-ingress` carries `nginx.ingress.kubernetes.io/limit-rps: 2`. Thirty rapid requests to the API host start returning `503` after a short burst, while the same requests to `localhost:8081` (first Ingress, no annotation) all return `200`.
 
-Now fire 30 rapid requests at the API host and print each status code. Before the annotation these would all be 200:
-
-![alt text](evidence/17.png)
+![limit-rps annotation, limited vs unlimited request results](evidence/ingress-8.png)
 
 ### ClusterRoles, aggregation and ClusterRoleBindings (2.3.1 and 2.3.2)
 
@@ -535,9 +552,12 @@ That covers the cluster side. Now the application side, to show the data survive
 
 - **Fresh database, not a migration.** The Deployment-to-StatefulSet change deleted the Assignment 1 PVC, and the operator-managed database started empty on PostgreSQL 18 (the tutor's image runs 17.11). No data was carried across at either step.
 - **Live cluster shared with Assignment 1.** Assignment 2 modified the running Assignment 1 setup (Services, ConfigMap, database). The Assignment 1 manifests in their own folder no longer match the live cluster.
-- **Ingress controller was pre-existing** and its Service was patched to fit the cluster's single host port mapping (Section 5.1). Recreating the cluster from `kind-cluster.yaml` alone would need the same patch, or port mappings for 80 and 443.
-- **`BACKEND_URL` is tied to `localhost:30080`.** It only works while the Ingress is reached on that address. Behind a real hostname it would need changing, or the frontend could call a relative `/api` path.
-- **HTTPS is only reachable through the node's Docker IP**, since the cluster maps no host port for it. This is a limitation of the kind port mapping, not of the Ingress.
+- **Cluster recreated for Ingress.** The first attempt reused a pre-existing controller and patched its Service to `NodePort 30080` to fit the Assignment 1 port mapping. The cluster was then deleted and recreated from `kind-cluster.yaml` with an `ingress-ready` control-plane and host ports for HTTP and HTTPS (Section 5.1). Everything in the namespace was reapplied from this folder's manifests. The two imperative Secrets (`tasktracker-tls` from `tls/`, `tasks-pg-credentials` from the values in `app-secret`) were recreated with the same commands, and the two rows in `tasks` were restored from a `pg_dump` taken before the delete. `db-statefulset-0` started again from the image's seed data.
+- **HTTP on host port `8081`, not `80`.** Port `80` on this machine is held by a local GitLab's bundled nginx, so host `8081` is mapped to the node's port `80`. HTTPS uses the standard `443`.
+- **Controller `nodeSelector` patch.** The v1.15.1 kind manifest no longer pins the controller to the `ingress-ready` node, so a one-line patch adds that `nodeSelector` (Section 5.1).
+- **CloudNativePG `imagePullPolicy` patch.** The operator manifest sets `imagePullPolicy: Always`, which ignores an image loaded with `kind load`. On the rebuilt cluster the operator Deployment was patched to `IfNotPresent` so it used the preloaded image instead of pulling from `ghcr.io`.
+- **`BACKEND_URL` is tied to `localhost:8081`.** It only works while the Ingress is reached on that address. Behind a real hostname it would need changing, or the frontend could call a relative `/api` path.
+- **Hostnames via `/etc/hosts`.** `tasktracker.local` and `api.tasktracker.local` resolve only because they were added to `/etc/hosts` (or passed with `curl --resolve`). There is no real DNS for them.
 - **Traefik was not installed** (comparison only, Section 5.6). A custom operator was not written (Section 7).
 - **ingress-nginx is retired upstream** (Section 5.1); acceptable for a local exercise, not for production.
 - **No readiness probes** (Unit I scope). After the backend restart at cutover, the Deployment reported the rollout finished while the container was still starting under emulation, and requests through the Ingress returned `502 Bad Gateway` until the server began listening. The backend log then showed `[db] connected` and `[server] listening on :8080`.
