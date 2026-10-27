@@ -1,0 +1,19 @@
+# helm test: calls the backend through its Service and requires the database to be connected.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Release.Name }}-test-connection
+  labels:
+    {{- include "tasktracker.labels" . | nindent 4 }}
+    tier: test
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  restartPolicy: Never
+  containers:
+    - name: check-api
+      image: busybox:1.37
+      command: ["sh", "-c"]
+      args:
+        - wget -qO- http://backend-svc:8080/api/status | tee /dev/stderr | grep -q '"db":"connected"'

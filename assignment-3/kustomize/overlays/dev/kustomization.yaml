@@ -1,0 +1,36 @@
+# Dev: one replica per tier, base resources, its own namespace and hostname.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+  - namespace.yaml
+  - ingress.yaml
+
+namespace: tasktracker-dev
+
+labels:
+  - pairs:
+      app.kubernetes.io/environment: dev
+    includeSelectors: false
+    includeTemplates: true
+
+# Only the value that differs is given; the rest comes from the base generator.
+configMapGenerator:
+  - name: app-config
+    behavior: merge
+    literals:
+      - BACKEND_URL=http://dev.tasktracker.local:8081
+      # Only the UI's own origin may call the API (base default is "*").
+      - CORS_ORIGIN=http://dev.tasktracker.local:8081
+
+patches:
+  # JSON 6902: exact path. Two environments cannot share NodePort 30080.
+  - target:
+      version: v1
+      kind: Service
+      name: frontend-svc
+    patch: |-
+      - op: replace
+        path: /spec/ports/0/nodePort
+        value: 30180

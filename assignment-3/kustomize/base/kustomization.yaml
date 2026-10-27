@@ -1,0 +1,45 @@
+# Base: everything the Task Tracker needs in any environment (Assignment 1, unchanged in substance).
+# No namespace is set here; each overlay chooses its own.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - quota.yaml
+  - rbac.yaml
+  - database-pvc.yaml
+  - database-deployment.yaml
+  - database-service.yaml
+  - backend-deployment.yaml
+  - backend-service.yaml
+  - frontend-deployment.yaml
+  - frontend-service.yaml
+
+# Replaces Assignment 1's configmap.yaml. The generated name gets a content hash,
+# so any config change renames it and rolls every Deployment that references it.
+configMapGenerator:
+  - name: app-config
+    envs:
+      - app-config.env
+
+# Replaces Assignment 1's secret.yaml. secret.env is git-ignored; see secret.env.example.
+secretGenerator:
+  - name: app-secret
+    envs:
+      - secret.env
+
+# The issued image tag is declared once here instead of in three Deployments.
+images:
+  - name: sarojsanyasi/dso202-frontend
+    newTag: "1.0"
+  - name: sarojsanyasi/dso202-backend
+    newTag: "1.0"
+  - name: sarojsanyasi/dso202-db
+    newTag: "1.0"
+
+# Added to metadata and Pod templates only; selectors stay exactly as in Assignment 1.
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: tasktracker
+      app.kubernetes.io/managed-by: kustomize
+    includeSelectors: false
+    includeTemplates: true

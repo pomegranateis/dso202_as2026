@@ -1,0 +1,14 @@
+# environments/dev.yaml - overrides for the development release.
+environment: dev
+frontend:
+  replicaCount: 1
+  service:
+    nodePort: 30180
+backend:
+  replicaCount: 1
+config:
+  backendUrl: http://dev.tasktracker.local:8081
+  corsOrigin: http://dev.tasktracker.local:8081
+ingress:
+  enabled: true
+  host: dev.tasktracker.local

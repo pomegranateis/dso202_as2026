@@ -1,0 +1,39 @@
+# Prod: more replicas, explicit resources, its own namespace and hostname.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+  - namespace.yaml
+  - ingress.yaml
+
+namespace: tasktracker-prod
+
+labels:
+  - pairs:
+      app.kubernetes.io/environment: prod
+    includeSelectors: false
+    includeTemplates: true
+
+configMapGenerator:
+  - name: app-config
+    behavior: merge
+    literals:
+      - BACKEND_URL=http://prod.tasktracker.local:8081
+
+# The database stays at 1: it is a single Postgres on one ReadWriteOnce volume.
+replicas:
+  - name: frontend-deployment
+    count: 2
+  - name: backend-deployment
+    count: 2
+
+patches:
+  # Strategic merge: Kubernetes-shaped fragments for the container resources.
+  - path: patch-resources.yaml
+  # JSON 6902: exact paths for the NodePort and an annotation whose key contains "/".
+  - path: patch-frontend-svc.yaml
+    target:
+      version: v1
+      kind: Service
+      name: frontend-svc

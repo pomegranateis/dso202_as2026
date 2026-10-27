@@ -1,0 +1,35 @@
+{{- if .Values.quota.enabled }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: assignment-quota
+  labels:
+    {{- include "tasktracker.labels" . | nindent 4 }}
+spec:
+  hard:
+    {{- range $k, $v := .Values.quota.hard }}
+    {{ $k }}: {{ $v | quote }}
+    {{- end }}
+{{- end }}
+{{- if .Values.limitRange.enabled }}
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: assignment-limitrange
+  labels:
+    {{- include "tasktracker.labels" . | nindent 4 }}
+spec:
+  limits:
+    - type: Container
+      {{- with .Values.limitRange }}
+      default:
+        {{- toYaml .default | nindent 8 }}
+      defaultRequest:
+        {{- toYaml .defaultRequest | nindent 8 }}
+      max:
+        {{- toYaml .max | nindent 8 }}
+      min:
+        {{- toYaml .min | nindent 8 }}
+      {{- end }}
+{{- end }}

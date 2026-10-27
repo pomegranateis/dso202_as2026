@@ -1,0 +1,2 @@
+kustomize/base/secret.env
+helm/secrets-*.yaml

@@ -1,0 +1,9 @@
+- op: replace
+  path: /spec/ports/0/nodePort
+  value: 30280
+- op: add
+  path: /metadata/annotations
+  value: {}
+- op: add
+  path: /metadata/annotations/tasktracker.dso202~1owner
+  value: platform-team
