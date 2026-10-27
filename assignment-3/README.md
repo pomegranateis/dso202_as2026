@@ -280,3 +280,4 @@ After applying: a new ReplicaSet per tier, the old ones at 0, both ConfigMaps pr
 - **Hostnames via `/etc/hosts`.** `dev.tasktracker.local` and `prod.tasktracker.local` resolve only on this machine.
 - **Unit numbering.** The brief refers to Unit 4; the lecture notes used are titled Kustomize and "Unit III 3.2 — Helm".
 - **Assignment 1 and 2 untouched.** Their folders and the Assignment 2 namespace `dso202-assignment-01` were not modified.
+
