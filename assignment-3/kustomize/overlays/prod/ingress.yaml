@@ -1,0 +1,26 @@
+# Not part of Assignment 1: lets a browser reach both tiers through the existing
+# ingress-nginx controller (host port 8081), so the UI is not "Backend unreachable".
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tasktracker-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: prod.tasktracker.local
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-svc
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-svc
+                port:
+                  number: 8080

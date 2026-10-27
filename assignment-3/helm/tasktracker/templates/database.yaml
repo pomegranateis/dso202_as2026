@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db-pvc
+  labels:
+    {{- include "tasktracker.labels" . | nindent 4 }}
+    tier: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.database.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.database.storage }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-deployment
+  labels:
+    {{- include "tasktracker.labels" . | nindent 4 }}
+    tier: database
+spec:
+  replicas: 1
+  # Recreate: a rolling update would briefly run two Postgres Pods on the same RWO volume.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "tasktracker.selectorLabels" (dict "root" . "tier" "database") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "tasktracker.labels" . | nindent 8 }}
+        tier: database
+      annotations:
+        {{- include "tasktracker.configChecksum" . | nindent 8 }}
+    spec:
+      containers:
+        - name: db
+          image: {{ include "tasktracker.image" (dict "root" . "name" "db") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secret
+          {{- with .Values.database.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: db-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: db-storage
+          persistentVolumeClaim:
+            claimName: db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-svc
+  labels:
+    {{- include "tasktracker.labels" . | nindent 4 }}
+    tier: database
+spec:
+  clusterIP: None
+  selector:
+    {{- include "tasktracker.selectorLabels" (dict "root" . "tier" "database") | nindent 4 }}
+  ports:
+    - port: 5432
+      targetPort: 5432

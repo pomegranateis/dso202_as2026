@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  labels:
+    {{- include "tasktracker.labels" . | nindent 4 }}
+    tier: backend
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "tasktracker.selectorLabels" (dict "root" . "tier" "backend") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "tasktracker.labels" . | nindent 8 }}
+        tier: backend
+      annotations:
+        {{- include "tasktracker.configChecksum" . | nindent 8 }}
+    spec:
+      containers:
+        - name: backend
+          image: {{ include "tasktracker.image" (dict "root" . "name" "backend") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secret
+          {{- with .Values.backend.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-svc
+  labels:
+    {{- include "tasktracker.labels" . | nindent 4 }}
+    tier: backend
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "tasktracker.selectorLabels" (dict "root" . "tier" "backend") | nindent 4 }}
+  ports:
+    - port: 8080
+      targetPort: 8080

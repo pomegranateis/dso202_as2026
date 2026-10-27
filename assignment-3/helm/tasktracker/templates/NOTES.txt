@@ -1,0 +1,13 @@
+Task Tracker ({{ .Values.environment }}) installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Frontend replicas: {{ .Values.frontend.replicaCount }}   Backend replicas: {{ .Values.backend.replicaCount }}
+{{- if .Values.ingress.enabled }}
+
+Open in a browser:  http://{{ .Values.ingress.host }}:8081
+API health check:   curl http://{{ .Values.ingress.host }}:8081/api/status
+{{- else }}
+
+Port-forward the backend:  kubectl -n {{ .Release.Namespace }} port-forward svc/backend-svc 8090:8080
+{{- end }}
+
+Run the connection test:  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}

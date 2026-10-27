@@ -1,0 +1,66 @@
+# values.yaml - defaults for the tasktracker chart. Override with -f <file> or --set.
+
+# Required: dev or prod. No default on purpose, so the chart refuses to render
+# until an environment is chosen (enforced in values.schema.json).
+environment: ""
+
+# The issued images. An empty tag means "use .Chart.AppVersion".
+image:
+  repositoryPrefix: sarojsanyasi
+  tag: ""
+  pullPolicy: IfNotPresent
+
+frontend:
+  replicaCount: 1
+  service:
+    type: NodePort
+    nodePort: 30080
+  resources: {}
+
+backend:
+  replicaCount: 1
+  resources: {}
+
+database:
+  storage: 1Gi
+  storageClass: standard
+  resources: {}
+
+# Non-sensitive configuration, rendered into the app-config ConfigMap.
+config:
+  dbName: taskdb
+  appPort: "8080"
+  corsOrigin: "*"
+  # What the browser uses to reach the API. Empty = cluster-internal backend-svc (Assignment 1 behaviour).
+  backendUrl: ""
+
+# Database credentials, rendered into the app-secret Secret.
+# Never committed: supplied from a git-ignored file (see secrets.example.yaml).
+credentials:
+  username: taskuser
+  password: ""
+
+ingress:
+  enabled: false
+  className: nginx
+  host: ""
+
+quota:
+  enabled: true
+  hard:
+    requests.cpu: "1500m"
+    requests.memory: "1.5Gi"
+    limits.cpu: "3000m"
+    limits.memory: "3Gi"
+    pods: "10"
+
+limitRange:
+  enabled: true
+  default: {cpu: "250m", memory: "256Mi"}
+  defaultRequest: {cpu: "100m", memory: "128Mi"}
+  max: {cpu: "500m", memory: "512Mi"}
+  min: {cpu: "50m", memory: "64Mi"}
+
+rbac:
+  # Assignment 1 Task 8: read-only ServiceAccount, Role and RoleBinding.
+  enabled: true
