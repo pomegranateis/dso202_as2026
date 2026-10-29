@@ -1,12 +1,12 @@
-# DSO202 — Practical 3: Environment-Specific Configuration with Kustomize on Kind
+# DSO202 — Practical 5: Environment-Specific Configuration with Kustomize on Kind
 
 | | |
 |---|---|
 | **Name** | Pema Tshering Yangchen |
 | **Student ID** | 2230295 |
 | **Module** | DSO202 — Scaling, Orchestration, Monitoring & Observability |
-| **Practical** | 03 — Environment-Specific Configuration with Kustomize |
-| **Repository** | `dso202_as2026/dso202-practical-03` |
+| **Practical** | 05 — Environment-Specific Configuration with Kustomize |
+| **Repository** | `dso202_as2026/dso202-practical-05` |
 | **Date** | 29 September 2026 |
 
 ---
