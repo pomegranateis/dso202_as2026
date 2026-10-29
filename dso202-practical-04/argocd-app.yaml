@@ -1,0 +1,27 @@
+# argocd-app.yaml - registers the GitOps demo with Argo CD (applied with kubectl).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-webapp
+  namespace: argocd # Argo CD Applications always live in the argocd namespace
+spec:
+  project: default
+
+  # 1. Where is the desired state? (GitHub)
+  source:
+    repoURL: https://github.com/pomegranateis/dso202-gitops-demo.git
+    targetRevision: HEAD
+    path: manifests
+
+  # 2. Where should it be deployed? (this kind cluster)
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: demo-app
+
+  # 3. How should Argo CD sync it?
+  syncPolicy:
+    automated:
+      prune: true    # delete resources that were removed from Git
+      selfHeal: true # revert manual kubectl changes
+    syncOptions:
+      - CreateNamespace=true
