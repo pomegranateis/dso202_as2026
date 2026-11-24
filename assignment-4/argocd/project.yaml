@@ -1,0 +1,20 @@
+# project.yaml - an Argo CD AppProject that limits the Task Tracker apps to
+# this repository and to their own namespaces (instead of the open "default" project).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: tasktracker
+  namespace: argocd
+spec:
+  description: DSO202 Assignment 4 - Task Tracker delivered by GitOps
+  sourceRepos:
+    - https://github.com/pomegranateis/dso202_as2026.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: tasktracker-gitops-dev
+    - server: https://kubernetes.default.svc
+      namespace: tasktracker-gitops-prod
+  # Namespaces are created by Argo CD (CreateNamespace=true), which is cluster-scoped.
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
