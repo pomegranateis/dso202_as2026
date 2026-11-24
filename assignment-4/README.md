@@ -10,7 +10,7 @@ points to it, so that all four assignments can be found from this repository.
 | **Evidence** | [docs/evidence.md](https://github.com/pomegranateis/dso202-gitops/blob/main/docs/evidence.md): command output for Tasks 1–10 |
 | **Release tags** | `v1.0.0`, `v1.1.0`, `v1.2.0` |
 | **Pull requests** | [#1–#6](https://github.com/pomegranateis/dso202-gitops/pulls?q=is%3Apr) (Task 7) |
-| **`main` when this page was written** | `a1a329a` |
+| **`main` when this page was written** | `7ac5212` |
 
 ## What was built
 
