@@ -41,3 +41,38 @@ three minutes.
   fault for the failing release.
 - `ReplicaSet` and `Pod` were added to the workload project's whitelist so that Argo CD shows Pods and their logs.
 - The smoke test uses the Assignment 2 LimitRange minimum (`50m`/`64Mi`) instead of Listing 13's lower values.
+
+## Screenshots
+
+Shown from the `dso202-gitops` repository ([`docs/screenshots/`](https://github.com/pomegranateis/dso202-gitops/tree/main/docs/screenshots)); each one is
+also placed next to its command output in [docs/evidence.md](https://github.com/pomegranateis/dso202-gitops/blob/main/docs/evidence.md).
+
+**Task 2 — Argo CD v3.5.6 after admin sign-in:** all six Applications `Healthy` and `Synced`.
+
+![Argo CD after admin sign-in](https://raw.githubusercontent.com/pomegranateis/dso202-gitops/main/docs/screenshots/a4-1-argocd-signed-in.jpg)
+
+**Task 3 — the root Application's resource tree:** five child Applications and the `dso202` AppProject, created
+by the root from Git.
+
+![Root Application resource tree](https://raw.githubusercontent.com/pomegranateis/dso202-gitops/main/docs/screenshots/a4-2-root-tree.jpg)
+
+**Task 5 — the `tasktracker-dev` resource tree:** ConfigMaps, Services, Deployments with their ReplicaSets and Pods,
+the database StatefulSet and its Pod, and the PostSync smoke-test Job.
+
+![tasktracker-dev resource tree](https://raw.githubusercontent.com/pomegranateis/dso202-gitops/main/docs/screenshots/a4-3-tasktracker-dev-tree.jpg)
+
+**Task 6 — the read-only `reviewer` account reading Pod logs**, its User Info, and its Applications page (only the
+two `dso202` Applications are visible):
+
+![reviewer reading the backend Pod's logs](https://raw.githubusercontent.com/pomegranateis/dso202-gitops/main/docs/screenshots/a4-4-reviewer-logs.jpg)
+
+![User Info: reviewer](https://raw.githubusercontent.com/pomegranateis/dso202-gitops/main/docs/screenshots/a4-4b-reviewer-user-info.jpg)
+
+![reviewer's Applications page](https://raw.githubusercontent.com/pomegranateis/dso202-gitops/main/docs/screenshots/a4-4c-reviewer-applications.jpg)
+
+**Task 5 — the application in both environments:** dev at `http://localhost:30080` and staging at
+`http://localhost:8081`, each reporting `BACKEND + DB ONLINE`.
+
+![Dev UI](https://raw.githubusercontent.com/pomegranateis/dso202-gitops/main/docs/screenshots/a4-5-dev-ui.jpg)
+
+![Staging UI](https://raw.githubusercontent.com/pomegranateis/dso202-gitops/main/docs/screenshots/a4-6-staging-ui.jpg)
