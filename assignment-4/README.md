@@ -1,109 +1,43 @@
-# DSO202 — Assignment 4 (DRAFT, work in progress)
+# DSO202 — Assignment 4: GitOps Delivery of the Task Tracker with Argo CD
 
-> **Status:** started, not finished. The official brief, including the required **Image 1.1**, could not be found (it is not in this repository, and a search of the shared DSO202 Drive files and email found nothing). This draft assumes Assignment 4 continues from Practical 4 (GitOps with Argo CD) and Assignment 3. **Once the brief and Image 1.1 are found, check this assumption first** and update Section 1.
+The assignment brief requires the work to live in its own public repository, `dso202-gitops`. This folder only
+points to it, so that all four assignments can be found from this repository.
 
-**Assumed brief:** deliver the Task Tracker from Assignments 1 and 3 by GitOps, with Argo CD keeping the cluster in line with this Git repository.
-**Tools:** Argo CD, Helm chart from Assignment 3 (`assignment-3/helm/tasktracker`, unchanged)
-**Cluster:** `kind` (`dso202`: 1 control-plane node, 2 worker nodes), the same cluster used in Assignments 2 and 3 and Practical 4
-
----
-
-## 1. Brief and Image 1.1
-
-| Item | Status |
+| | |
 | --- | --- |
-| Assignment 4 brief | **Missing**: to be copied here word for word |
-| Image 1.1 (required by the brief) | **Missing**: ask the tutor or classmates; save it as `evidence/image-1.1.png` |
-| Assumed topic (GitOps / Argo CD) | To confirm against the brief |
+| **Repository** | <https://github.com/pomegranateis/dso202-gitops> |
+| **Write-up** | [README](https://github.com/pomegranateis/dso202-gitops#readme): purpose, pinned versions, build sequence, credentials, deviations, screenshots, answers Q1–Q6 |
+| **Evidence** | [docs/evidence.md](https://github.com/pomegranateis/dso202-gitops/blob/main/docs/evidence.md): command output for Tasks 1–10 |
+| **Release tags** | `v1.0.0`, `v1.1.0`, `v1.2.0` |
+| **Pull requests** | [#1–#6](https://github.com/pomegranateis/dso202-gitops/pulls?q=is%3Apr) (Task 7) |
+| **`main` when this page was written** | `a1a329a` |
 
----
+## What was built
 
-## 2. What Changes from Assignment 3
+Argo CD v3.5.6 runs in a kind cluster (`dso202-gitops`) and delivers the Task Tracker from Git to two
+environments: `dev` follows `main` with automated sync, prune and self-heal; `staging` follows a release tag and is
+synchronised by hand. An app-of-apps root Application creates every other Application, two AppProjects separate the
+administrator-level platform layer from the least-privilege workload project, database credentials are committed
+only as SealedSecrets, and the whole environment was rebuilt from the repository and one backed-up key in about
+three minutes.
 
-| Area | Assignment 3 | Assignment 4 (planned) |
-| --- | --- | --- |
-| Who applies changes | Me, with `kubectl apply -k` / `helm install` | Argo CD, from the `main` branch of this repository |
-| Source of truth | My terminal and local files | Git: a commit is the only way to change the cluster |
-| Drift (manual `kubectl edit`) | Stays until noticed | dev: reverted automatically (`selfHeal`); prod: shown as `OutOfSync` |
-| Deleted resources | Left behind unless removed by hand | dev: removed (`prune`) |
-| Promotion dev → prod | Second `helm install` | Automatic sync for dev, manual `argocd app sync` for prod |
-| Access control | `default` project | Dedicated `AppProject` limited to this repo and two namespaces |
+| Task | Result |
+| --- | --- |
+| 1 | Repository in the required layout; Assignment 3 chart adjusted to the chart contract C1–C11 |
+| 2 | Argo CD installed from a pinned Kustomize overlay; seven Pods running |
+| 3 | `platform` and `dso202` AppProjects; root Application created `dso202` |
+| 4 | Sealed Secrets through Git; credentials sealed per environment; no plaintext in history |
+| 5 | Waves database → backend → frontend, PostSync smoke test, CRUD in dev, staging synced by hand |
+| 6 | Read-only `reviewer` account; log access granted by one commit |
+| 7 | Release promoted through the tag gate; faulty release diagnosed, rollback refused, `git revert`, fix-forward |
+| 8 | Four drills (self-heal, reported drift, pruning, project guardrail), each predicted before running |
+| 9 | Cluster deleted and rebuilt from Git and the sealing key: 3 min 18 s to a working dev frontend |
+| 10 | Bonus: `tasktracker-dev` as a two-source Application |
 
----
+## Deviations (details in the repository README)
 
-## 3. Repository Structure
-
-```
-assignment-4/
-├── README.md
-├── argocd/
-│   ├── project.yaml     # AppProject "tasktracker": allowed repo + destinations
-│   ├── app-dev.yaml     # Application: chart + environments/dev.yaml, automated sync
-│   └── app-prod.yaml    # Application: chart + environments/prod.yaml, manual sync
-└── evidence/            # screenshots a4-1 … (to be added), and image-1.1.png
-```
-
-The Applications point at `assignment-3/helm/tasktracker` with `../environments/<env>.yaml`, so the chart is reused, not copied.
-
----
-
-## 4. Environments
-
-| Setting | dev | prod |
-| --- | --- | --- |
-| Argo CD Application | `tasktracker-dev` | `tasktracker-prod` |
-| Namespace | `tasktracker-gitops-dev` | `tasktracker-gitops-prod` |
-| Values file | `assignment-3/helm/environments/dev.yaml` | `assignment-3/helm/environments/prod.yaml` |
-| Sync | Automated (`prune`, `selfHeal`) | Manual |
-| Ingress host | `dev.tasktracker.local` | `prod.tasktracker.local` |
-
-**Note:** the values files reuse the Assignment 3 NodePorts (30180 / 30280) and Ingress hosts, so the Assignment 3 Helm and Kustomize installs must be removed first (`helm uninstall …`, `kubectl delete -k …`), or the Services will clash.
-
----
-
-## 5. Planned Steps
-
-1. Check the cluster and that Argo CD from Practical 4 is still running: `kubectl get pods -n argocd`.
-2. Remove the Assignment 3 releases (see note in Section 4).
-3. Apply the project and Applications:
-   ```bash
-   kubectl apply -f argocd/project.yaml
-   kubectl apply -f argocd/app-dev.yaml -f argocd/app-prod.yaml
-   ```
-4. Give the database password without committing it (the chart's `required` check stops the render until this is done):
-   ```bash
-   argocd app set tasktracker-dev  -p credentials.password='<password>'
-   argocd app set tasktracker-prod -p credentials.password='<password>'
-   ```
-   A better option to look at later: Sealed Secrets or External Secrets, so the Secret itself can live in Git encrypted.
-5. Wait for dev to show `Synced` / `Healthy`, then open `http://dev.tasktracker.local:8081`.
-6. **GitOps demo:** change `frontend.replicaCount` in `environments/dev.yaml`, commit, push, and watch Argo CD roll it out.
-7. **Self-heal demo:** `kubectl scale deploy/frontend-deployment -n tasktracker-gitops-dev --replicas=3` and watch Argo CD put it back.
-8. **Rollback demo:** `argocd app history` / `git revert` of the change from step 6.
-9. Sync prod by hand: `argocd app sync tasktracker-prod`.
-10. Take screenshots for every step into `evidence/` and fill in Section 6.
-
----
-
-## 6. Evidence
-
-_To be added after the steps in Section 5 are run._
-
-| # | Shows | File |
-| --- | --- | --- |
-| 1.1 | Image required by the brief | `evidence/image-1.1.png` (missing) |
-| a4-1 | Argo CD UI: both Applications | — |
-| a4-2 | dev `Synced` / `Healthy` | — |
-| a4-3 | Commit → automatic rollout | — |
-| a4-4 | Self-heal reverting a manual change | — |
-| a4-5 | Rollback | — |
-| a4-6 | prod manual sync | — |
-
----
-
-## 7. To Do
-
-- [ ] Find the Assignment 4 brief and Image 1.1; confirm or correct the assumed topic
-- [ ] Run the steps in Section 5 on the kind cluster
-- [ ] Add screenshots and write up results
-- [ ] Decide on secret handling (manual parameter vs Sealed Secrets)
+- The `1.1` release images were never issued, so Task 7 used the issued `1.0` images (from my own Docker Hub
+  account, `pomegranatei/dso202-*`) and made each release a values change, with a deliberately injected and declared
+  fault for the failing release.
+- `ReplicaSet` and `Pod` were added to the workload project's whitelist so that Argo CD shows Pods and their logs.
+- The smoke test uses the Assignment 2 LimitRange minimum (`50m`/`64Mi`) instead of Listing 13's lower values.
